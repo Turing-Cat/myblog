@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.myblog.mapper.BlogMapper">
+    <resultMap id="blog" type="blog">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="flag" column="flag"/>
+        <result property="views" column="views"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="firstPicture" column="first_picture"/>
+        <result property="shareStatement" column="share_statement"/>
+        <result property="published" column="published"/>
+        <result property="appreciation" column="appreciation"/>
+        <result property="commentTabled" column="comment_tabled"/>
+        <result property="description" column="description"/>
+        <result property="recommend" column="recommend"/>
+        <result property="createTime" column="create_time"/>
+        <result property="typeId" column="type_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="tagIds" column="tag_ids"/>
+        <association property="type" javaType="type">
+            <id property="id" column="typeid"/>
+            <result property="name" column="typename"/>
+        </association>
+        <association property="user" javaType="User">
+            <id property="id" column="uid"/>
+            <result property="nickname" column="nickname"/>
+            <result property="username" column="username"/>
+            <result property="email" column="email"/>
+            <result property="avatar" column="avatar"/>
+        </association>
+        <collection property="tags" ofType="Tag">
+            <id property="id" column="tagid"/>
+            <result property="name" column="tagname"/>
+        </collection>
+    </resultMap>
+    <insert id="saveBlogAndTag" parameterType="blogAndTag">
+        insert into t_blog_tags(tag_id,blog_id) values(#{tagId},#{blogId})
+    </insert>
+
+    <select id="getAllBlogs" resultMap="blog">
+        select b.id,b.title,b.update_time,b.recommend,b.type_id,b.published,
+               t.id typeid,t.name typename
+        from t_blog b,t_type t
+        where b.type_id = t.id
+    </select>
+
+    <select id="getDetailedBlog" resultMap="blog">
+        select b.id, b.first_picture, b.flag, b.title, b.content, b.views,
+               b.update_time,b.comment_tabled, b.share_statement, b.appreciation,
+               u.nickname, u.avatar,
+               tag.id tagid, tag.name tagname
+        from t_blog b,t_user u,t_tag tag,t_blog_tags tb
+        where b.user_id=u.id and b.id=tb.blog_id and tb.tag_id=tag.id and b.id=#{id}
+    </select>
+
+    <select id="getByTypeId" resultMap="blog">
+        select b.id, b.title, b.first_picture, b.views, b.update_time, b.description,
+               t.name typename, t.id typeid,
+               u.nickname, u.avatar
+        from t_blog b,t_type t,t_user u
+        where b.type_id = t.id and b.user_id=u.id and b.type_id=#{typeId}
+        order by b.update_time desc
+    </select>
+
+    <select id="getByTagId" resultMap="blog">
+        select  b.id, b.title, b.first_picture, b.views, b.update_time, b.description,
+                t.name typename, t.id typeid,
+                tag.name tagname, tag.id tagid,
+                u.nickname, u.avatar
+        from t_blog b,t_type t,t_user u,t_blog_tags tb,t_tag tag
+        where b.type_id = t.id and b.user_id = u.id
+                  and tb.blog_id=b.id and tb.tag_id=tag.id and tag.id=#{tagId}
+        order by b.update_time desc
+    </select>
+    <select id="getIndexBlog" resultMap="blog">
+        select b.id, b.title, b.first_picture, b.views, b.update_time, b.description,
+               t.name typename, t.id typeid,
+               u.nickname, u.avatar
+        from t_blog b,t_type t,t_user u
+        where b.type_id=t.id and b.user_id=u.id
+        order by b.update_time desc
+    </select>
+    <select id="getSearchBlog" resultMap="blog">
+        select b.id, b.title, b.first_picture, b.views, b.update_time, b.description,
+               t.name typename,
+               u.nickname, u.avatar
+        from t_blog b,t_type t,t_user u
+        where b.type_id=t.id and b.user_id=u.id and
+           b.title like concat('%',#{query},'%') or b.content like concat('%',#{query},'%')
+        order byb.update_time desc
+    </select>
+
+    <select id="searchAllBlog" resultMap="blog" parameterType="blog">
+        <bind name="pattern" value="'%' + title + '%'" />
+        select b.id, b.title, b.update_time, b.recommend, b.published, b.type_id,
+               t.id, t.name
+        from t_blog b ,t_type t
+        <where>
+            <if test="1==1">
+                b.type_id = t.id
+            </if>
+            <if test="typeId!=null">
+                and b.type_id=#{typeId}
+            </if>
+            <if test="recommend !=null">
+                and b.recommend=#{recommend}
+            </if>
+            <if test="title != null">
+                and b.title=#{pattern}
+            </if>
+        </where>
+    </select>
+
+    <select id="findGroupYear" resultType="string">
+        select DATE_FORMAT(b.update_time,'%Y') from t_blog b
+        order by b.update_time desc
+    </select>
+
+    <select id="findByYear" resultMap="blog">
+        select b.title,b.update_time,b.id,b.flag
+        from t_blog b
+        where DATE_FORMAT(b.update_time,'%Y') = #{year}
+    </select>
+</mapper>
